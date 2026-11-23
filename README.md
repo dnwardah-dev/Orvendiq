@@ -122,6 +122,53 @@ flowchart TB
 
 <sub>The diagram describes component responsibilities and transaction/event boundaries; it is not a claim of distributed messaging infrastructure.</sub>
 
+## Fraud assessment lifecycle
+
+Orvendiq separates financial transaction persistence from fraud
+risk assessment. A successful transfer can be committed even if
+the subsequent assessment requires recovery.
+
+```mermaid
+flowchart TD
+    A["Transfer committed in Oracle"]
+    B["AFTER_COMMIT event listener"]
+    C["Fraud Risk Engine"]
+    D{"Assessment already exists?"}
+    E["Reuse existing assessment"]
+    F["Persist risk classification"]
+    G["LOW / MEDIUM / HIGH"]
+
+    R["Recovery Scheduler"]
+    S["Find committed transfers missing assessments"]
+
+    A --> B
+    B --> C
+    C --> D
+    D -->|Yes| E
+    D -->|No| F
+    F --> G
+
+    R --> S
+    S --> C
+
+    classDef transfer fill:#F8F1F5,stroke:#B88DA9,color:#49334B
+    classDef fraud fill:#EEE8F8,stroke:#A58AC8,color:#59427B
+    classDef recovery fill:#E6F4ED,stroke:#71AB91,color:#245D47
+
+    class A,B transfer
+    class C,D,E,F,G fraud
+    class R,S recovery
+```
+
+**Engineering considerations**
+
+- Financial writes are committed before post-commit fraud processing.
+- A unique transaction-to-assessment relationship helps enforce idempotency.
+- The recovery scheduler can process transfers with missing assessments.
+- Fraud scores are rule-based indicators, not proof of fraudulent activity.
+
+---
+
 ### A transfer, end to end
 
 ```mermaid
