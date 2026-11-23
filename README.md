@@ -117,6 +117,7 @@ flowchart TB
     class AUTH security
     class OWN,TRANSFER,LEDGER,FRAUD,RECOVERY service
     class DB database
+    style SERVICES fill:transparent,stroke:#C5A4B6,stroke-width:1px,color:#715B6C
 ```
 
 <sub>The diagram describes component responsibilities and transaction/event boundaries; it is not a claim of distributed messaging infrastructure.</sub>
