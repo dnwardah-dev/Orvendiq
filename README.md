@@ -1,181 +1,146 @@
 # Orvendiq
+### Full-Stack Fintech Transaction & Fraud Monitoring Platform
 
-### Secure Fintech Transaction & Fraud Monitoring Platform
+Orvendiq is a full-stack fintech simulation built with
+Java Spring Boot, Oracle Database, React, and TypeScript.
 
-Orvendiq is a full-stack fintech portfolio project featuring a
-Java Spring Boot backend, Oracle Database, and a React dashboard.
+The application demonstrates secure financial transaction
+processing, double-entry ledger accounting, account-level
+authorization, and rule-based fraud risk monitoring through
+an interactive dashboard.
 
-The project demonstrates financial transaction processing,
-double-entry accounting, account-level authorization, and
-rule-based fraud risk assessment.
+> Portfolio project only. No real money is processed.
 
-> Portfolio simulation only. Orvendiq does not process real money
-> or connect to a production banking network.
+## Highlights
 
-## Key Features
-
-### Financial Transaction Processing
-- REST API for account and transaction operations
-- Account-to-account transfer workflow
-- Balance validation before transfer execution
-- Transaction history and account balance retrieval
-- Database transaction management
-
-### Double-Entry Ledger
-- Debit and credit ledger entries for transfers
-- Ledger-based balance calculation
-- Transaction-to-ledger relationships
-- Financial consistency validation
-
-### Authentication & Authorization
-- JWT-based authentication
+- JWT authentication with Spring Security
 - BCrypt password hashing
-- Account ownership validation
-- Protected API endpoints
-- User-to-account access relationships
-
-### Fraud Risk Assessment
-- Rule-based transaction risk scoring
-- Risk classification: LOW, MEDIUM, HIGH
-- Transaction amount and behavioral indicators
-- Asynchronous post-commit fraud assessment
-- Recovery mechanism for pending assessments
-- Fraud assessment history for dashboard visualization
+- Account ownership authorization
+- Account-to-account transfer processing
+- Double-entry debit and credit ledger
+- Transaction history and balance tracking
+- Rule-based fraud risk assessment
+- Post-commit fraud processing and recovery
+- Responsive dashboard with interactive visualizations
+- React, TypeScript, GSAP, Motion, and Lenis
 
 ## Technology Stack
 
-| Layer | Technology |
-|---|---|
-| Backend | Java 21, Spring Boot |
-| Security | Spring Security, JWT, BCrypt |
-| Database | Oracle Database Free |
-| Persistence | Spring Data JPA, Hibernate, JDBC |
-| Build | Maven |
-| Testing | JUnit 5, Mockito |
-| Frontend | React, TypeScript, Vite |
-| UI | Tailwind CSS, Motion, GSAP |
-| Infrastructure | Docker |
+**Backend:** Java 21, Spring Boot, Spring Security,
+Spring Data JPA, Maven, JUnit, Mockito
 
-## Architecture
+**Database:** Oracle Database Free, SQL
 
-```text
-React + TypeScript Dashboard
-            |
-            | HTTP / REST API
-            v
-     Spring Boot Backend
-            |
-    +-------+--------+
-    |       |        |
-    v       v        v
-   JWT   Transfer   Fraud
- Security Service   Engine
-            |        |
-            v        v
-        Transaction Events
-            |
-            v
-      Oracle Database
-            |
-    +-------+--------+
-    |       |        |
- Accounts Ledger  Assessments
-```
+**Frontend:** React, TypeScript, Vite, Tailwind CSS,
+GSAP, Motion, Lenis
+
+**Infrastructure:** Docker
+
+## Repository Structure
+
+    Orvendiq/
+    |-- backend/
+    |   |-- src/
+    |   |-- pom.xml
+    |   `-- README.md
+    |-- frontend/
+    |   |-- src/
+    |   |-- package.json
+    |   `-- README.md
+    |-- .gitignore
+    `-- README.md
+
+## System Architecture
+
+    React Dashboard
+          |
+          | REST API / JWT
+          v
+    Spring Boot Backend
+          |
+          +-- Authentication & Authorization
+          +-- Transfer Processing
+          +-- Double-Entry Ledger
+          +-- Fraud Risk Assessment
+          |
+          v
+    Oracle Database
 
 ## Main API Endpoints
 
-| Method | Endpoint | Description |
+| Method | Endpoint | Purpose |
 |---|---|---|
-| POST | /api/v1/auth/login | Authenticate user |
-| POST | /api/v1/transfers | Submit transfer |
-| GET | /api/v1/transactions | Retrieve transaction history |
-| GET | /api/v1/accounts/{accountNumber}/balance | Retrieve account balance |
-| GET | /api/v1/fraud/assessments/{id} | Retrieve fraud assessment |
+| POST | /api/v1/auth/login | Authentication |
+| POST | /api/v1/transfers | Money transfer simulation |
+| GET | /api/v1/transactions | Transaction history |
+| GET | /api/v1/accounts/{accountNumber}/balance | Account balance |
+| GET | /api/v1/fraud/assessments/{id} | Fraud assessment |
 | GET | /api/v1/system/status | System status |
 
-Endpoint access may require a valid JWT and appropriate
-account ownership.
+Protected endpoints require appropriate authentication
+and authorization.
 
-## Transaction Workflow
+## Getting Started
 
-1. Authenticate the request.
-2. Validate the source account and authorization.
-3. Validate the transfer amount and available balance.
-4. Persist the financial transaction.
-5. Record the corresponding debit and credit ledger entries.
-6. Commit the database transaction.
-7. Trigger post-commit fraud risk assessment.
-8. Expose transaction and risk data through the API.
+### Backend
 
-Fraud assessment is separate from the committed financial
-transaction. A recovery mechanism handles assessments that
-were not completed during the initial event processing.
-
-## Local Development
-
-### Requirements
-
+Requirements:
 - Java 21
 - Oracle Database Free
-- Maven or Maven Wrapper
-- A configured Oracle application schema
+- Configured application database
 
-### Environment Variables
+Set the required environment variables:
 
-Configure the following variables in your local environment:
+- ORVENDIQ_DB_PASSWORD
+- ORVENDIQ_JWT_SECRET
 
-```text
-ORVENDIQ_DB_PASSWORD
-ORVENDIQ_JWT_SECRET
-```
+Start the backend:
 
-Never commit real credentials or JWT secrets.
+    cd backend
+    .\mvnw.cmd spring-boot:run
 
-Additional database connection settings must match the
-application configuration and your local Oracle environment.
+### Frontend
 
-### Start Backend
+Requirements:
+- Node.js and npm
+- Running Spring Boot backend
 
-On Windows:
+Install dependencies and start Vite:
 
-```powershell
-.\mvnw.cmd spring-boot:run
-```
+    cd frontend
+    npm install
+    npm run dev
 
-### Build
+Development frontend URL:
 
-```powershell
-.\mvnw.cmd clean package -DskipTests
-```
+http://localhost:5173
 
-### Selected Unit Tests
+## Testing
 
-```powershell
-.\mvnw.cmd "-Dtest=FraudRiskEngineTest,FraudRiskBoundaryTest,TransferFraudListenerTest" test
-```
+Selected fraud unit tests:
 
-Integration tests may require an active Oracle database.
-Avoid running data-modifying tests against a database
-containing information you need to preserve.
+    cd backend
+    .\mvnw.cmd "-Dtest=FraudRiskEngineTest,FraudRiskBoundaryTest,TransferFraudListenerTest" test
 
-## Security Considerations
+Database integration tests require careful setup
+and may modify local demo data.
 
-- Passwords are stored as hashes rather than plaintext.
-- Financial endpoints use authentication and authorization.
-- Account ownership is checked before protected operations.
-- Financial writes use database transaction boundaries.
-- Fraud results are informational and do not guarantee
-  that a transaction is legitimate or fraudulent.
-- Demo accounts and transactions contain fictional data.
+## Security & Scope
 
-## Project Scope
+Orvendiq demonstrates authentication, authorization,
+transaction consistency, and fraud monitoring concepts.
 
-Orvendiq is an educational engineering project designed
-to demonstrate backend architecture and financial domain
-modeling.
+It is not a licensed financial service or production
+banking platform. Fraud scores are informational and
+do not guarantee transaction safety.
 
-It is not a licensed financial service, production banking
-platform, or certified fraud detection system.
+Never commit passwords, JWT secrets, database files,
+or real personal financial information.
+
+## Documentation
+
+- [Backend Documentation](backend/README.md)
+- [Frontend Documentation](frontend/README.md)
 
 ## Author
 

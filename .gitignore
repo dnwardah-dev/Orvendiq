@@ -1,69 +1,38 @@
-HELP.md
-target/
-.mvn/wrapper/maven-wrapper.jar
-!**/src/main/**/target/
-!**/src/test/**/target/
+# Build outputs
+**/target/
+**/node_modules/
+**/dist/
+**/coverage/
 
-### STS ###
-.apt_generated
-.classpath
-.factorypath
-.project
-.settings
-.springBeans
-.sts4-cache
-
-### IntelliJ IDEA ###
-.idea
-*.iws
-*.iml
-*.ipr
-
-### NetBeans ###
-/nbproject/private/
-/nbbuild/
-/dist/
-/nbdist/
-/.nb-gradle/
-build/
-!**/src/main/**/build/
-!**/src/test/**/build/
-
-### VS Code ###
-.vscode/
-
-
-# ORVENDIQ_BACKEND_RELEASE_SAFETY
-
-# Environment secrets
+# Environment files
 .env
 .env.*
-!.env.example
+**/.env
+**/.env.*
+!**/.env.example
+
+# Credentials
 *.pem
 *.key
-
-# Build artifacts
-target/
-*.class
+*.p12
+*.jks
 
 # Local databases
 *.db
 *.sqlite
 *.sqlite3
 
-# Development backups
-*.bak
-*.backup
-*.corrupted
-
-# Logs
+# Temporary files and logs
 *.log
-logs/
-
-# Orvendiq release protection
-/target/
+*.bak
 *.backup.*
-*.p12
-*.jks
+*.before-*
+*.tmp
+
+# IDE
 .idea/
-.settings/
+.vscode/
+.DS_Store
+
+# OS
+Thumbs.db
