@@ -99,27 +99,28 @@ flowchart TD
 
 ### A transfer, end to end
 
-```text
-Authenticated request
-      |
-      v
-Verify source-account ownership
-      |
-      v
-Validate recipient, amount and available funds
-      |
-      v
-[Oracle transaction]
-  Persist transfer
-  Persist debit + credit ledger entries
-[Commit]
-      |
-      +----> Return transfer result
-      |
-      +----> After-commit fraud assessment
-                    |
-                    +--> Persist risk classification
-                    +--> Recovery path if assessment is missing
+```mermaid
+flowchart TD
+    A["Authenticated request"] --> B["Verify source-account ownership"]
+    B --> C["Validate recipient, amount and available funds"]
+    C --> D["Oracle Database Transaction"]
+    D --> E["Persist transfer record"]
+    E --> F["Persist debit and credit ledger entries"]
+    F --> G["Commit financial transaction"]
+    G --> H["Return transfer result"]
+    G --> I["After-commit fraud assessment"]
+    I --> J["Persist risk classification"]
+    I --> K["Recovery path for missing assessments"]
+
+    classDef input fill:#F8F1F5,stroke:#B88DA9,color:#49334B
+    classDef database fill:#F1E5EF,stroke:#A777A3,color:#49334B
+    classDef success fill:#E6F4ED,stroke:#71AB91,color:#245D47
+    classDef fraud fill:#EEE8F8,stroke:#A58AC8,color:#59427B
+
+    class A,B,C input
+    class D,E,F database
+    class G,H success
+    class I,J,K fraud
 ```
 
 ## Technology stack
