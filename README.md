@@ -149,3 +149,29 @@ Dwi Nisyatul Wardah
 Information Technology Graduate
 
 GitHub: https://github.com/dnwardah-dev
+
+---
+
+## Application Preview
+
+Explore Orvendiq's full-stack fintech experience, from secure
+authentication to financial transactions and fraud monitoring.
+
+<!-- ORVENDIQ SCREENSHOT GALLERY -->
+
+### Login
+![Orvendiq Login](docs/screenshots/login.png)
+
+### Overview Dashboard
+![Orvendiq Overview Dashboard](docs/screenshots/overview.png)
+
+### Money Transfers
+![Orvendiq Transfers](docs/screenshots/transfers.png)
+
+### Transaction History
+![Orvendiq Transactions](docs/screenshots/transactions.png)
+
+### Fraud Analytics
+![Orvendiq Fraud Analytics](docs/screenshots/fraud-analytics.png)
+
+---
