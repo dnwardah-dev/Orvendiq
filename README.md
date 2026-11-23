@@ -79,20 +79,44 @@ The React + TypeScript interface integrates with REST endpoints for authenticati
 ## System architecture
 
 ```mermaid
-flowchart TD
-    UI[React + TypeScript Dashboard] -->|HTTPS / REST + Bearer JWT| API[Spring Boot REST API]
-    API --> AUTH[Spring Security + Account Ownership]
-    AUTH --> TRANSFER[Transfer Service]
-    TRANSFER -->|Transactional writes| DB[(Oracle Database)]
-    DB --> ACC[Accounts / Users]
-    DB --> TX[Transactions]
-    DB --> LEDGER[Debit + Credit Ledger Entries]
-    TRANSFER -->|After-commit event| EVENT[Fraud Assessment Listener]
-    EVENT --> ENGINE[Rule-Based Risk Engine]
-    ENGINE --> ASSESS[Fraud Assessments]
-    RECOVERY[Recovery Scheduler] --> ASSESS
-    ASSESS --> DB
-    API -->|Authorized queries| UI
+flowchart TB
+    UI["React + TypeScript Dashboard"]
+    API["REST API"]
+    AUTH["Spring Security + JWT"]
+
+    subgraph SERVICES["Spring Boot Services"]
+        OWN["Account Ownership"]
+        TRANSFER["Transfer Service"]
+        LEDGER["Double-Entry Ledger"]
+        FRAUD["Fraud Assessment"]
+        RECOVERY["Recovery Scheduler"]
+    end
+
+    DB[("Oracle Database")]
+
+    UI --> API
+    API --> AUTH
+    AUTH --> OWN
+    OWN --> TRANSFER
+    TRANSFER --> LEDGER
+    TRANSFER -->|Committed transaction event| FRAUD
+    RECOVERY -->|Recover missing assessments| FRAUD
+
+    OWN --> DB
+    TRANSFER --> DB
+    LEDGER --> DB
+    FRAUD --> DB
+    RECOVERY --> DB
+
+    classDef frontend fill:#F8F1F5,stroke:#B88DA9,color:#49334B
+    classDef security fill:#EEE8F8,stroke:#A58AC8,color:#59427B
+    classDef service fill:#F1E5EF,stroke:#A777A3,color:#49334B
+    classDef database fill:#E6F4ED,stroke:#71AB91,color:#245D47
+
+    class UI,API frontend
+    class AUTH security
+    class OWN,TRANSFER,LEDGER,FRAUD,RECOVERY service
+    class DB database
 ```
 
 <sub>The diagram describes component responsibilities and transaction/event boundaries; it is not a claim of distributed messaging infrastructure.</sub>
