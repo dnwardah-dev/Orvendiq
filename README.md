@@ -1,177 +1,248 @@
-# Orvendiq
-### Full-Stack Fintech Transaction & Fraud Monitoring Platform
+<div align="center">
 
-Orvendiq is a full-stack fintech simulation built with
-Java Spring Boot, Oracle Database, React, and TypeScript.
+# ORVENDIQ
 
-The application demonstrates secure financial transaction
-processing, double-entry ledger accounting, account-level
-authorization, and rule-based fraud risk monitoring through
-an interactive dashboard.
+### A Fintech Simulation Built Around Transaction Integrity, Access Control & Fraud Intelligence
 
-> Portfolio project only. No real money is processed.
+**A full-stack financial transaction platform where moving money is only half the problem.**
+The other half is making every transfer **accountable, authorized, traceable, and explainable**.
 
-## Highlights
+**Java 21 · Spring Boot · Oracle Database · React · TypeScript**
 
-- JWT authentication with Spring Security
-- BCrypt password hashing
-- Account ownership authorization
-- Account-to-account transfer processing
-- Double-entry debit and credit ledger
-- Transaction history and balance tracking
-- Rule-based fraud risk assessment
-- Post-commit fraud processing and recovery
-- Responsive dashboard with interactive visualizations
-- React, TypeScript, GSAP, Motion, and Lenis
+[Explore the Dashboard](#product-walkthrough) · [Engineering Deep Dive](#engineering-deep-dive) · [Architecture](#system-architecture) · [Run Locally](#getting-started)
 
-## Technology Stack
+</div>
 
-**Backend:** Java 21, Spring Boot, Spring Security,
-Spring Data JPA, Maven, JUnit, Mockito
+---
 
-**Database:** Oracle Database Free, SQL
+## The engineering problem
 
-**Frontend:** React, TypeScript, Vite, Tailwind CSS,
-GSAP, Motion, Lenis
+A transfer interface is easy to prototype. Building the services *behind* it is more interesting: How do you prevent an unauthorized account transfer? How do you avoid partially recorded transactions? How do you reconstruct a balance from ledger entries? What happens when the fraud analysis fails **after** money movement has committed?
 
-**Infrastructure:** Docker
+**Orvendiq is my attempt to solve those problems in one cohesive, testable application.** It connects a React dashboard to a Spring Boot REST API backed by Oracle, with an explicit financial ledger and a separate fraud-assessment workflow.
 
-## Repository Structure
+> **Scope:** This is a portfolio and educational simulation. It uses fictional demo accounts, does not move real money, and is not a production-ready banking or fraud-prevention system.
 
-    Orvendiq/
-    |-- backend/
-    |   |-- src/
-    |   |-- pom.xml
-    |   `-- README.md
-    |-- frontend/
-    |   |-- src/
-    |   |-- package.json
-    |   `-- README.md
-    |-- .gitignore
-    `-- README.md
+## Product walkthrough
 
-## System Architecture
+<table>
+<tr>
+<td width="50%"><b>01 — Sign in</b><br/><sub>JWT-backed authentication and protected application access.</sub><br/><br/><img src="docs/screenshots/login.png" alt="Orvendiq login screen" width="100%"/></td>
+<td width="50%"><b>02 — Financial overview</b><br/><sub>Balances, recent activity and security insights in one workspace.</sub><br/><br/><img src="docs/screenshots/overview.png" alt="Orvendiq dashboard overview" width="100%"/></td>
+</tr>
+<tr>
+<td width="50%"><b>03 — Transfers</b><br/><sub>Account-to-account transfer flow with server-side validation.</sub><br/><br/><img src="docs/screenshots/transfers.png" alt="Orvendiq money transfer screen" width="100%"/></td>
+<td width="50%"><b>04 — Transaction history</b><br/><sub>Track financial activity through the authenticated API.</sub><br/><br/><img src="docs/screenshots/transactions.png" alt="Orvendiq transaction history" width="100%"/></td>
+</tr>
+</table>
 
-    React Dashboard
-          |
-          | REST API / JWT
-          v
-    Spring Boot Backend
-          |
-          +-- Authentication & Authorization
-          +-- Transfer Processing
-          +-- Double-Entry Ledger
-          +-- Fraud Risk Assessment
-          |
-          v
-    Oracle Database
+**05 — Fraud intelligence**
+Risk assessments are surfaced as explainable indicators, not absolute verdicts.
 
-## Main API Endpoints
+![Orvendiq fraud analytics dashboard](docs/screenshots/fraud-analytics.png)
+
+## Engineering deep dive
+
+### 1. A ledger, not just a mutable balance
+
+Transfers are represented as financial transactions with corresponding **debit and credit ledger entries**. This provides an audit trail for balance reconstruction rather than relying solely on an account balance field.
+
+**Transfer invariants modeled in Orvendiq:**
+
+- A successful transfer records a matching debit and credit for the transfer amount.
+- Transfer and ledger writes execute inside a database transaction boundary.
+- Insufficient funds and invalid transfers are rejected before successful posting.
+- Account balances can be derived from ledger activity and cross-checked for consistency.
+
+**Why it matters:** A pretty transfer success message is not proof of financial correctness. The ledger is the part that makes a transfer traceable and auditable.
+
+### 2. Authorization is enforced on the backend
+
+Authentication proves who a user is; it does **not** automatically grant access to any account number supplied in an API request.
+
+Orvendiq uses Spring Security, JWT authentication, BCrypt password hashing and account-ownership checks on protected operations. A `USER_ACCOUNTS` relationship maps authenticated users to their permitted accounts.
+
+**Design principle:** The frontend is a client, not a security boundary. The backend verifies authorization independently of what the user interface allows.
+
+### 3. Fraud assessment does not decide whether the ledger commits
+
+The fraud engine evaluates transaction signals such as amount, frequency and recipient history to produce **LOW / MEDIUM / HIGH** risk indicators.
+
+Rather than placing every fraud operation inside the critical financial write path, Orvendiq processes assessment events **after the transfer commits**. A recovery scheduler handles eligible transactions whose assessments have not yet been recorded, while uniqueness and idempotency checks help avoid duplicate assessments.
+
+**Trade-off:** This design keeps the committed financial record separate from post-transaction analysis, but the dashboard may briefly show a transaction before its risk result is available. A fraud score is an investigative signal, **not** proof that a transaction is safe or fraudulent.
+
+### 4. A dashboard connected to real backend workflows
+
+The React + TypeScript interface integrates with REST endpoints for authentication, transfers, balances, transaction history and fraud results. It includes responsive layouts and interaction details using Tailwind CSS, GSAP, Motion and Lenis. Selected live panels periodically refresh their data rather than displaying static demo-only numbers.
+
+## System architecture
+
+```mermaid
+flowchart TD
+    UI[React + TypeScript Dashboard] -->|HTTPS / REST + Bearer JWT| API[Spring Boot REST API]
+    API --> AUTH[Spring Security + Account Ownership]
+    AUTH --> TRANSFER[Transfer Service]
+    TRANSFER -->|Transactional writes| DB[(Oracle Database)]
+    DB --> ACC[Accounts / Users]
+    DB --> TX[Transactions]
+    DB --> LEDGER[Debit + Credit Ledger Entries]
+    TRANSFER -->|After-commit event| EVENT[Fraud Assessment Listener]
+    EVENT --> ENGINE[Rule-Based Risk Engine]
+    ENGINE --> ASSESS[Fraud Assessments]
+    RECOVERY[Recovery Scheduler] --> ASSESS
+    ASSESS --> DB
+    API -->|Authorized queries| UI
+```
+
+<sub>The diagram describes component responsibilities and transaction/event boundaries; it is not a claim of distributed messaging infrastructure.</sub>
+
+### A transfer, end to end
+
+```text
+Authenticated request
+      |
+      v
+Verify source-account ownership
+      |
+      v
+Validate recipient, amount and available funds
+      |
+      v
+[Oracle transaction]
+  Persist transfer
+  Persist debit + credit ledger entries
+[Commit]
+      |
+      +----> Return transfer result
+      |
+      +----> After-commit fraud assessment
+                    |
+                    +--> Persist risk classification
+                    +--> Recovery path if assessment is missing
+```
+
+## Technology stack
+
+| Layer | Technologies | Responsibility |
+|:--|:--|:--|
+| Backend | Java 21, Spring Boot, Spring Security | Business rules, REST APIs, authentication and authorization |
+| Persistence | Oracle Database Free, Spring Data JPA, Hibernate, JDBC | Accounts, transaction records, ledger entries and risk assessments |
+| Frontend | React, TypeScript, Vite, Tailwind CSS | Dashboard and API-driven financial workflows |
+| Experience | GSAP, Motion, Lenis | Interface transitions and smooth scrolling |
+| Testing | JUnit 5, Mockito | Risk-engine, service and integration test coverage |
+| Local infrastructure | Docker | Oracle development environment |
+
+## API surface
 
 | Method | Endpoint | Purpose |
-|---|---|---|
-| POST | /api/v1/auth/login | Authentication |
-| POST | /api/v1/transfers | Money transfer simulation |
-| GET | /api/v1/transactions | Transaction history |
-| GET | /api/v1/accounts/{accountNumber}/balance | Account balance |
-| GET | /api/v1/fraud/assessments/{id} | Fraud assessment |
-| GET | /api/v1/system/status | System status |
+|:--|:--|:--|
+| `POST` | `/api/v1/auth/login` | Authenticate and obtain access token |
+| `POST` | `/api/v1/transfers` | Submit an authorized transfer |
+| `GET` | `/api/v1/transactions` | Retrieve transaction history |
+| `GET` | `/api/v1/accounts/{accountNumber}/balance` | Read account balance |
+| `GET` | `/api/v1/fraud/assessments/{id}` | Read a fraud risk assessment |
+| `GET` | `/api/v1/system/status` | Inspect application status |
 
-Protected endpoints require appropriate authentication
-and authorization.
+Access to business endpoints is subject to JWT authentication and account-level permissions. See [backend documentation](backend/README.md) for more details.
 
-## Getting Started
+## Testing and failure scenarios
 
-### Backend
+The project contains unit and integration tests targeting financial and security behavior, including:
 
-Requirements:
-- Java 21
-- Oracle Database Free
-- Configured application database
+- Risk classification rules and threshold boundaries.
+- Transfer authorization and account ownership.
+- Insufficient-funds behavior and transaction posting.
+- Double-entry ledger consistency checks.
+- Fraud assessment idempotency and recovery scenarios.
+- Transaction concurrency and duplicate-transfer scenarios.
 
-Set the required environment variables:
+**Important distinction:** These are areas represented in the test suite, not a claim that every test passes in every environment. Oracle-backed integration tests require a dedicated test database and may change data. Avoid running them against a demo database you want to preserve.
 
-- ORVENDIQ_DB_PASSWORD
-- ORVENDIQ_JWT_SECRET
+Run selected fraud tests:
 
-Start the backend:
+```powershell
+cd backend
+.\mvnw.cmd "-Dtest=FraudRiskEngineTest,FraudRiskBoundaryTest,TransferFraudListenerTest" test
+```
 
-    cd backend
-    .\mvnw.cmd spring-boot:run
+## Getting started
 
-### Frontend
+**Prerequisites:** Java 21, Node.js/npm, Oracle Database Free, and an initialized application schema. Docker can be used to run the local Oracle instance.
 
-Requirements:
-- Node.js and npm
-- Running Spring Boot backend
+**1. Configure backend credentials locally.** The application expects environment variables such as:
 
-Install dependencies and start Vite:
+```text
+ORVENDIQ_DB_PASSWORD
+ORVENDIQ_JWT_SECRET
+```
 
-    cd frontend
-    npm install
-    npm run dev
+Configure the database host, service/PDB and application user according to `backend/src/main/resources/application.yaml`. Do **not** commit passwords, JWT secrets, real user information or database exports.
 
-Development frontend URL:
+**2. Start the API (PowerShell):**
 
-http://localhost:5173
+```powershell
+cd backend
+.\mvnw.cmd spring-boot:run
+```
 
-## Testing
+**3. Start the dashboard in another terminal:**
 
-Selected fraud unit tests:
+```powershell
+cd frontend
+npm install
+npm run dev
+```
 
-    cd backend
-    .\mvnw.cmd "-Dtest=FraudRiskEngineTest,FraudRiskBoundaryTest,TransferFraudListenerTest" test
+The Vite development interface is typically available at `http://localhost:5173`, with API requests proxied to the running backend by the local Vite configuration.
 
-Database integration tests require careful setup
-and may modify local demo data.
+**Production builds:**
 
-## Security & Scope
+```powershell
+# From backend/
+.\mvnw.cmd clean package -DskipTests
 
-Orvendiq demonstrates authentication, authorization,
-transaction consistency, and fraud monitoring concepts.
+# From frontend/
+npm run build
+```
 
-It is not a licensed financial service or production
-banking platform. Fraud scores are informational and
-do not guarantee transaction safety.
+For more setup and feature details, see the [backend README](backend/README.md) and [frontend README](frontend/README.md).
 
-Never commit passwords, JWT secrets, database files,
-or real personal financial information.
+## Repository structure
 
-## Documentation
+```text
+Orvendiq/
+├── backend/            # Java / Spring Boot services and tests
+├── frontend/           # React / TypeScript application
+├── docs/
+│   └── screenshots/   # Product walkthrough images
+├── .gitignore
+└── README.md
+```
 
-- [Backend Documentation](backend/README.md)
-- [Frontend Documentation](frontend/README.md)
+## What this project demonstrates
 
-## Author
+Orvendiq was built to practice the engineering challenges behind transaction-oriented products: **database consistency, secure account access, asynchronous side effects, domain modeling, automated testing and full-stack integration**.
 
-Dwi Nisyatul Wardah
+The aim is not to imitate the scale or certification of a bank; it is to show how I reason about correctness and failure modes while delivering a working end-to-end product.
 
-Information Technology Graduate
+## Limitations and next steps
 
-GitHub: https://github.com/dnwardah-dev
-
----
-
-## Application Preview
-
-Explore Orvendiq's full-stack fintech experience, from secure
-authentication to financial transactions and fraud monitoring.
-
-<!-- ORVENDIQ SCREENSHOT GALLERY -->
-
-### Login
-![Orvendiq Login](docs/screenshots/login.png)
-
-### Overview Dashboard
-![Orvendiq Overview Dashboard](docs/screenshots/overview.png)
-
-### Money Transfers
-![Orvendiq Transfers](docs/screenshots/transfers.png)
-
-### Transaction History
-![Orvendiq Transactions](docs/screenshots/transactions.png)
-
-### Fraud Analytics
-![Orvendiq Fraud Analytics](docs/screenshots/fraud-analytics.png)
+- **Not production banking software:** no real-money transfers or licensed financial integrations.
+- **Rule-based fraud detection:** heuristic signals are not a validated machine-learning fraud model.
+- **Local-first deployment:** reproducible provisioning and automated CI/CD are possible future improvements.
+- **Security hardening:** broader threat modeling, deployment secrets management, rate limiting and operational monitoring would be needed for production use.
 
 ---
+
+<div align="center">
+
+### Built by Dwi Nisyatul Wardah
+
+**Information Technology Graduate · Full-Stack & Backend Development**
+
+[GitHub Profile](https://github.com/dnwardah-dev) · [Browse Backend](backend/) · [Browse Frontend](frontend/)
+
+<sub>Orvendiq is an educational fintech simulation. All demo financial data is fictional.</sub>
+
+</div>
